@@ -49,8 +49,6 @@ I ---> B
 
 import asyncio
 
-event_loop = asyncio.new_event_loop()
-
 async def task1():
     print('hello')
     await asyncio.sleep(1)  # 暂停 1 秒，把控制权交还给事件循环
@@ -61,11 +59,14 @@ async def task2():
     await asyncio.sleep(2)
     print('bar')
 
-event_loop.create_task(task1())
-event_loop.create_task(task2())
+async def main():
+    # 并发运行两个任务，等它们都完成
+    await asyncio.gather(
+        task1(),
+        task2(),
+    )
 
-# 创建一个事件循环并无限循环地执行其作业集合
-event_loop.run_forever()
+asyncio.run(main())
 ```
 
 ```text
@@ -198,8 +199,8 @@ async def plant_a_tree():
 
 一般来说，当等待的任务完成时 `(dig_the_hole_task)`，原先的任务或协程 `(plant_a_tree())` 将被添加回事件循环的待办列表以便恢复运行。
 
-与任务不同，等待协程并不会将控制权交还给事件循环！ 先将协程包装到任务中，然后再等待，会导致控制权交还。`await coroutine` 的行为实际上与调用常规的同步 `Python` 函数相同。考虑以下程序:
-
+与任务不同，`await coroutine` 不会像 `create_task()` 那样创建独立任务；但如果该协程内部执行了真正的异步等待，例如 `await asyncio.sleep()`，控制权仍会通过内部等待交还给事件循环。 先将协程包装到任务中，然后再等待，会导致控制权交还。`await coroutine` 的行为实际上与调用常规的同步 `Python` 函数相同。考虑以下程序:
+gii
 ```python
 import asyncio
 
@@ -240,3 +241,7 @@ I am coro_a(). Hi!
 这个例子强调了仅使用 await coroutine 可能会无意中霸占其他任务的控制权并在实际上阻滞事件循环。 asyncio.run() 可以通过 debug=True 旗标来检测这种情况，它将会启用 调试模式。此外，它还会记录任何独占执行时间 100 毫秒以上的协程。
 
 该设计有意牺牲了 await 用法的某些概念明晰度以提升性能。每当有任务被等待时，控制权都需要沿着调用栈一路向上传递到事件循环。
+
+#### 作业结论
+
+顺序执行耗时约 4.5 秒，并发执行耗时约 2 秒，接近最长单个任务耗时 2 秒。顺序 await 仍然逐个等待，因此没有获得并发收益。
