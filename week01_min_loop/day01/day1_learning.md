@@ -199,8 +199,7 @@ async def plant_a_tree():
 
 一般来说，当等待的任务完成时 `(dig_the_hole_task)`，原先的任务或协程 `(plant_a_tree())` 将被添加回事件循环的待办列表以便恢复运行。
 
-与任务不同，`await coroutine` 不会像 `create_task()` 那样创建独立任务；但如果该协程内部执行了真正的异步等待，例如 `await asyncio.sleep()`，控制权仍会通过内部等待交还给事件循环。 先将协程包装到任务中，然后再等待，会导致控制权交还。`await coroutine` 的行为实际上与调用常规的同步 `Python` 函数相同。考虑以下程序:
-gii
+与任务不同，`await coroutine` 不会像 `create_task()` 那样创建独立任务；它会在当前任务中直接执行该协程。如果该协程内部执行了真正的异步等待，例如 `await asyncio.sleep()`，控制权仍会交还给事件循环；如果协程没有任何会暂停的 `await`，它就会连续执行到结束。考虑以下程序:
 ```python
 import asyncio
 
